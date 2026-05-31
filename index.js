@@ -12,7 +12,7 @@ const {
 } = require("discord.js");
 
 // =====================
-// 🔐 SAFE ENV CHECK
+// 🔐 SAFE ENV
 // =====================
 function mustGetEnv(name) {
     const value = process.env[name];
@@ -24,6 +24,7 @@ function mustGetEnv(name) {
 }
 
 const TOKEN = mustGetEnv("DISCORD_TOKEN");
+const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
 
 // =====================
 // 🤖 CLIENT
@@ -36,7 +37,7 @@ const ROLE_NAME = process.env.ROLE_NAME || "Prakti-Sani-Leitung";
 const DB_FILE = "./database.json";
 
 // =====================
-// 📦 DATABASE SAFE
+// 📦 DB SAFE
 // =====================
 function loadDB() {
     if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, "{}");
@@ -47,24 +48,19 @@ function saveDB(data) {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
+// =====================
+// 🧠 ADD POINTS
+// =====================
 function addPoints(db, userId, amount) {
     if (!db[userId]) db[userId] = 0;
     db[userId] += amount;
 }
 
 // =====================
-// 🔍 DEBUG ENV (Railway)
-// =====================
-console.log("🔍 ENV CHECK:");
-console.log("TOKEN:", process.env.DISCORD_TOKEN ? "OK" : "FEHLT");
-console.log("CLIENT_ID:", process.env.CLIENT_ID ? "OK" : "FEHLT");
-console.log("GUILD_ID:", process.env.GUILD_ID ? "OK" : "FEHLT");
-
-// =====================
 // 🤖 READY
 // =====================
 client.once(Events.ClientReady, () => {
-    console.log(`🤖 Bot online als ${client.user.tag}`);
+    console.log(`🤖 Online als ${client.user.tag}`);
 });
 
 // =====================
@@ -90,20 +86,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
             .setTitle("🚑 LSMD – Ausbilder Punktepanel")
             .setColor(0x2ecc71)
             .setDescription(
-`**📊 Wochenziel:** 5 Punkte pro Ausbilder  
+`**Wochenziel:** 5 Punkte pro Ausbilder  
+Vergib deine Punkte über die Buttons unten.
 
+**Wertungen:**
 🟢 Bewerber eingestellt → +1  
 🔵 Alleine fahren Prüfung → +2  
 🔴 Sanitäter Prüfung → +3  
 
-📌 LSMD Punkte System`
-            )
-            .setFooter({ text: "LSMD System • Buttons verwenden" });
+📌 Hinweis: Nur mit der Rolle PraktiSani klickbar.  
+🕒 Report: Sonntag 19:25 · Reset: Sonntag 19:30  
+
+LSMD Punkte-System • Buttons unten verwenden`
+            );
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId("p2").setLabel("🔵 +2").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("p3").setLabel("🔴 +3").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1 Bewerber").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("p2").setLabel("🔵 +2 Prüfung").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("p3").setLabel("🔴 +3 Sanitäter").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary)
         );
 
@@ -154,14 +154,41 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (!db[interaction.user.id]) db[interaction.user.id] = 0;
 
         let amount = 0;
+        let reason = "";
 
-        if (interaction.customId === "p1") amount = 1;
-        if (interaction.customId === "p2") amount = 2;
-        if (interaction.customId === "p3") amount = 3;
+        if (interaction.customId === "p1") {
+            amount = 1;
+            reason = "Bewerber eingestellt";
+        }
+
+        if (interaction.customId === "p2") {
+            amount = 2;
+            reason = "Alleine fahren Prüfung";
+        }
+
+        if (interaction.customId === "p3") {
+            amount = 3;
+            reason = "Sanitäter Prüfung";
+        }
 
         if (amount > 0) {
             addPoints(db, interaction.user.id, amount);
             saveDB(db);
+
+            // =====================
+            // 📥 LOG CHANNEL
+            // =====================
+            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+
+            if (logChannel) {
+                logChannel.send(
+                    `📊 **Punkte vergeben**
+👤 User: <@${interaction.user.id}>
+➕ Punkte: **+${amount}**
+📌 Grund: ${reason}
+🏆 Gesamt: **${db[interaction.user.id]}**`
+                );
+            }
 
             return interaction.reply({
                 content: `✅ +${amount} Punkte | Gesamt: ${db[interaction.user.id]}`,
@@ -171,7 +198,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         if (interaction.customId === "me") {
             return interaction.reply({
-                content: `📊 Deine Punkte: ${db[interaction.user.id] || 0}`,
+                content: `📊 Deine Punkte: **${db[interaction.user.id] || 0}**`,
                 ephemeral: true
             });
         }
@@ -179,6 +206,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 // =====================
-// 🔑 LOGIN (RAILWAY SAFE)
+// 🔑 LOGIN
 // =====================
 client.login(TOKEN);
