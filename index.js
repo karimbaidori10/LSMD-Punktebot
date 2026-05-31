@@ -1,4 +1,3 @@
-console.log("TOKEN CHECK:", process.env.DISCORD_TOKEN);
 require("dotenv").config();
 const fs = require("fs");
 
@@ -12,6 +11,23 @@ const {
     ButtonStyle
 } = require("discord.js");
 
+// =====================
+// 🔐 SAFE ENV CHECK
+// =====================
+function mustGetEnv(name) {
+    const value = process.env[name];
+    if (!value) {
+        console.error(`❌ FEHLER: ${name} fehlt in Railway Variables!`);
+        process.exit(1);
+    }
+    return value;
+}
+
+const TOKEN = mustGetEnv("DISCORD_TOKEN");
+
+// =====================
+// 🤖 CLIENT
+// =====================
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
@@ -19,35 +35,47 @@ const client = new Client({
 const ROLE_NAME = process.env.ROLE_NAME || "Prakti-Sani-Leitung";
 const DB_FILE = "./database.json";
 
-// 📦 DB SAFE LOAD
+// =====================
+// 📦 DATABASE SAFE
+// =====================
 function loadDB() {
     if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, "{}");
     return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
 }
 
-// 💾 SAVE
 function saveDB(data) {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 🧠 ADD POINTS
-function addPoints(userId, amount, data) {
-    if (!data[userId]) data[userId] = 0;
-    data[userId] += amount;
+function addPoints(db, userId, amount) {
+    if (!db[userId]) db[userId] = 0;
+    db[userId] += amount;
 }
 
+// =====================
+// 🔍 DEBUG ENV (Railway)
+// =====================
+console.log("🔍 ENV CHECK:");
+console.log("TOKEN:", process.env.DISCORD_TOKEN ? "OK" : "FEHLT");
+console.log("CLIENT_ID:", process.env.CLIENT_ID ? "OK" : "FEHLT");
+console.log("GUILD_ID:", process.env.GUILD_ID ? "OK" : "FEHLT");
+
+// =====================
 // 🤖 READY
+// =====================
 client.once(Events.ClientReady, () => {
-    console.log(`🤖 Online als ${client.user.tag}`);
+    console.log(`🤖 Bot online als ${client.user.tag}`);
 });
 
+// =====================
 // 🚑 INTERACTIONS
-client.on(Events.InteractionCreate, async interaction => {
+// =====================
+client.on(Events.InteractionCreate, async (interaction) => {
 
     let db = loadDB();
 
     // =====================
-    // 📊 PANEL
+    // 📊 PANEL COMMAND
     // =====================
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
@@ -68,9 +96,9 @@ client.on(Events.InteractionCreate, async interaction => {
 🔵 Alleine fahren Prüfung → +2  
 🔴 Sanitäter Prüfung → +3  
 
-📌 Nur für berechtigte Ausbilder`
+📌 LSMD Punkte System`
             )
-            .setFooter({ text: "LSMD Punkte-System" });
+            .setFooter({ text: "LSMD System • Buttons verwenden" });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1").setStyle(ButtonStyle.Success),
@@ -100,36 +128,15 @@ client.on(Events.InteractionCreate, async interaction => {
 
         let desc = "";
 
+        if (sorted.length === 0) desc = "Keine Daten vorhanden.";
+
         sorted.forEach(([id, pts], i) => {
             desc += `**${i + 1}.** <@${id}> — ${pts} Punkte\n`;
         });
 
-        embed.setDescription(desc || "Keine Daten");
+        embed.setDescription(desc);
 
         return interaction.reply({ embeds: [embed] });
-    }
-
-    // =====================
-    // 👮 ADMIN ADDPOINTS
-    // =====================
-    if (interaction.isChatInputCommand() && interaction.commandName === "addpoints") {
-
-        if (!interaction.member.permissions.has("Administrator")) {
-            return interaction.reply({
-                content: "❌ Kein Admin.",
-                ephemeral: true
-            });
-        }
-
-        const user = interaction.options.getUser("user");
-        const points = interaction.options.getInteger("points");
-
-        addPoints(user.id, points, db);
-        saveDB(db);
-
-        return interaction.reply({
-            content: `✅ ${user.tag} hat jetzt +${points} Punkte`
-        });
     }
 
     // =====================
@@ -144,6 +151,8 @@ client.on(Events.InteractionCreate, async interaction => {
             });
         }
 
+        if (!db[interaction.user.id]) db[interaction.user.id] = 0;
+
         let amount = 0;
 
         if (interaction.customId === "p1") amount = 1;
@@ -151,7 +160,7 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.customId === "p3") amount = 3;
 
         if (amount > 0) {
-            addPoints(interaction.user.id, amount, db);
+            addPoints(db, interaction.user.id, amount);
             saveDB(db);
 
             return interaction.reply({
@@ -169,4 +178,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// =====================
+// 🔑 LOGIN (RAILWAY SAFE)
+// =====================
+client.login(TOKEN);
