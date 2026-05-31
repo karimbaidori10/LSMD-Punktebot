@@ -5,14 +5,28 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 const commands = [
     new SlashCommandBuilder()
         .setName("panel")
-        .setDescription("Öffnet das LSMD Punktepanel")
-].map(command => command.toJSON());
+        .setDescription("Öffnet das LSMD Punkte Panel"),
 
-const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+    new SlashCommandBuilder()
+        .setName("leaderboard")
+        .setDescription("Zeigt die Top 10 Ausbilder"),
+
+    new SlashCommandBuilder()
+        .setName("addpoints")
+        .setDescription("Gibt einem User Punkte (Admin)")
+        .addUserOption(opt =>
+            opt.setName("user").setDescription("User").setRequired(true)
+        )
+        .addIntegerOption(opt =>
+            opt.setName("points").setDescription("Punkte").setRequired(true)
+        )
+].map(c => c.toJSON());
+
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
     try {
-        console.log("⏳ Registriere Slash Commands...");
+        console.log("⏳ Registriere Commands...");
 
         await rest.put(
             Routes.applicationGuildCommands(
@@ -22,8 +36,8 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
             { body: commands }
         );
 
-        console.log("✅ Slash Commands registriert.");
-    } catch (error) {
-        console.error(error);
+        console.log("✅ Commands fertig!");
+    } catch (err) {
+        console.error(err);
     }
 })();
