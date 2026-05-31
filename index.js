@@ -1,3 +1,4 @@
+console.log("TOKEN CHECK:", process.env.DISCORD_TOKEN);
 require("dotenv").config();
 const fs = require("fs");
 
