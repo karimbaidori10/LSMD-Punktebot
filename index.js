@@ -41,6 +41,7 @@ const client = new Client({
 
 // =====================
 const adminState = new Map();
+const handledInteractions = new Set();
 const mongo = new MongoClient(process.env.MONGO_URI);
 
 let pointsCollection;
