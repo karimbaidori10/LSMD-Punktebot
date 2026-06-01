@@ -217,7 +217,10 @@ if (interaction.isChatInputCommand() && interaction.commandName === "removepoint
     });
     }
 
-}// =====================// 📊 PANEL// =====================if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
+// =====================
+// 📊 PANEL
+// =====================
+if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
