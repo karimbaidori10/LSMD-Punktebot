@@ -26,9 +26,7 @@ function mustGetEnv(name) {
 
 const TOKEN = mustGetEnv("DISCORD_TOKEN");
 const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
-
-// 🔥 WICHTIG FIX: hardcoded (kein Role Bug mehr)
-const ROLE_NAME = "Prakti-Sani-Leitung";
+const ADMIN_ROLE_ID = mustGetEnv("ADMIN_ROLE_ID");
 
 // =====================
 // 🤖 CLIENT
@@ -83,9 +81,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
     let db = loadDB();
 
     // =====================
-    // 📊 PANEL (ORIGINAL DESIGN)
+    // 📊 PANEL (ORIGINAL LOOK)
     // =====================
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
+
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+
+        if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
+            return interaction.reply({
+                content: "❌ Keine Berechtigung.",
+                ephemeral: true
+            });
+        }
 
         const embed = new EmbedBuilder()
             .setTitle("🚑 LSMD – Ausbilder Punktepanel")
@@ -106,14 +113,17 @@ LSMD Punkte-System • Buttons unten verwenden`
             );
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId("p2").setLabel("🔵 +2").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("p3").setLabel("🔴 +3").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId("p1").setLabel("🟢 Bewerber eingestellt (+1)").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("p2").setLabel("🔵 Alleine fahren Prüfung (+2)").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("p3").setLabel("🔴 Sanitäter Prüfung (+3)").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId("admin").setLabel("👮 Admin").setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId("admin").setLabel("👮 Admin Panel").setStyle(ButtonStyle.Secondary)
         );
 
-        return interaction.reply({ embeds: [embed], components: [row] });
+        return interaction.reply({
+            embeds: [embed],
+            components: [row]
+        });
     }
 
     // =====================
@@ -123,8 +133,11 @@ LSMD Punkte-System • Buttons unten verwenden`
 
         const member = await interaction.guild.members.fetch(interaction.user.id);
 
-        if (!member.roles.cache.some(r => r.name === ROLE_NAME)) {
-            return interaction.reply({ content: "❌ Keine Berechtigung", ephemeral: true });
+        if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
+            return interaction.reply({
+                content: "❌ Keine Berechtigung",
+                ephemeral: true
+            });
         }
 
         if (!db[interaction.user.id]) db[interaction.user.id] = 0;
@@ -200,7 +213,7 @@ LSMD Punkte-System • Buttons unten verwenden`
     }
 
     // =====================
-    // 👤 SELECT USER
+    // 👤 USER SELECT
     // =====================
     if (interaction.isStringSelectMenu() && interaction.customId === "admin_user") {
 
@@ -215,7 +228,7 @@ LSMD Punkte-System • Buttons unten verwenden`
     }
 
     // =====================
-    // ⚙️ SELECT ACTION
+    // ⚙️ ACTION SELECT
     // =====================
     if (interaction.isStringSelectMenu() && interaction.customId === "admin_action") {
 
@@ -256,5 +269,4 @@ LSMD Punkte-System • Buttons unten verwenden`
     }
 });
 
-// =====================
 client.login(TOKEN);
