@@ -63,19 +63,23 @@ console.log(`🤖 Online als ${client.user.tag}`);
 
 });
 
-// =====================setInterval(async () => {const now = new Date();
+// =====================
+setInterval(async () => {
+    const now = new Date();
 
-if (now.getDay() === 0 && now.getHours() === 19 && now.getMinutes() === 30) {
-    const allPoints = await getAllPoints();
-    for (const userId of Object.keys(allPoints)) {
-        await setPoints(userId, 0);
+    if (now.getDay() === 0 && now.getHours() === 19 && now.getMinutes() === 30) {
+        const allPoints = await getAllPoints();
+
+        for (const userId of Object.keys(allPoints)) {
+            await setPoints(userId, 0);
+        }
+
+        console.log("🔁 Weekly Reset DONE");
     }
-    console.log("🔁 Weekly Reset DONE");
-}
-
 }, 60000);
 
-// =====================client.on(Events.InteractionCreate, async (interaction) => {
+// =====================
+client.on(Events.InteractionCreate, async (interaction) => {
 
 if (handledInteractions.has(interaction.id)) return;
 handledInteractions.add(interaction.id);
