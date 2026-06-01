@@ -435,11 +435,9 @@ log?.send({
 
         await setPoints(state.target, db[state.target]);
 
-        const log = await client.channels.fetch(LOG_CHANNEL_ID);
-
         const adminEmbed = new EmbedBuilder()
     .setColor(amount > 0 ? 0x3498DB : 0xE74C3C)
-    .setTitle("👮 LSMD • Admin Aktion")
+    .setTitle("👮 LSMD • Leitung Aktion")
     .addFields(
         {
             name: "👤 Betroffener User",
