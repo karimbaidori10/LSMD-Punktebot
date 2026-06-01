@@ -215,6 +215,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "removepoint
         content: `✅ ${points} Punkte von ${target.tag} entfernt.\n🏆 Neuer Stand: ${db[target.id]} Punkte`,
         ephemeral: true
     });
+    }
 
 }// =====================// 📊 PANEL// =====================if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
