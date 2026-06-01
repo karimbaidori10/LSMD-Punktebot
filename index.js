@@ -185,7 +185,7 @@ LSMD Punkte-System • Buttons unten verwenden`
             new ButtonBuilder().setCustomId("p2").setLabel("🔵 Alleine fahren Prüfung (+2)").setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId("p3").setLabel("🔴 Sanitäter Prüfung (+3)").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId("admin").setLabel("👮 Admin Panel").setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId("admin").setLabel("👮 Leitungs Panel").setStyle(ButtonStyle.Secondary)
         );
 
         return interaction.reply({
@@ -229,31 +229,50 @@ if (interaction.customId === "p3") {
 
             const log = await client.channels.fetch(LOG_CHANNEL_ID);
 
-            const logEmbed = new EmbedBuilder()
-    .setColor(0x2ECC71)
-    .setTitle("🚑 LSMD • Punkte eingetragen")
-    .setThumbnail(interaction.user.displayAvatarURL())
+            let color = 0x2ECC71;
+let emoji = "🟢";
+
+if (amount === 2) {
+    color = 0x3498DB;
+    emoji = "🔵";
+}
+
+if (amount === 3) {
+    color = 0xE74C3C;
+    emoji = "🔴";
+}
+
+const ziel = 5;
+const stand = db[interaction.user.id];
+
+const logEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(`${emoji} Aktion verbucht`)
+    .setDescription(
+        `<@${interaction.user.id}> hat **${reason}** erledigt.`
+    )
     .addFields(
         {
-            name: "👤 Ausbilder",
-            value: `<@${interaction.user.id}>`,
-            inline: true
-        },
-        {
-            name: "➕ Vergebene Punkte",
+            name: "Punkte",
             value: `+${amount}`,
             inline: true
         },
         {
-            name: "🏆 Aktueller Punktestand",
-            value: `${db[interaction.user.id]} Punkte`,
+            name: "Wochenstand",
+            value: `${stand}/${ziel}`,
             inline: true
+        },
+        {
+            name: "Status",
+            value: stand >= ziel
+                ? "✅ Ziel erreicht"
+                : "⌛ Ziel noch nicht erreicht",
+            inline: false
         }
     )
     .setFooter({
-        text: "LSMD Punkte-System"
-    })
-    .setTimestamp();
+        text: `LSMD Punkte-System • ${new Date().toLocaleString("de-DE")}`
+    });
 
 log?.send({
     embeds: [logEmbed]
@@ -382,7 +401,7 @@ log?.send({
             inline: true
         },
         {
-            name: "👮 Administrator",
+            name: "👮 Leitung",
             value: `<@${interaction.user.id}>`,
             inline: true
         },
@@ -398,7 +417,7 @@ log?.send({
         }
     )
     .setFooter({
-        text: "LSMD Admin-System"
+        text: "LSMD Leitungs-System"
     })
     .setTimestamp();
 
