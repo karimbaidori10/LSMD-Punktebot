@@ -1,5 +1,3 @@
-Ja. Ersetze deinen **ganzen `index.js`** mit diesem Code:
-
 ```js
 // cache-bust: force rebuild with current package-lock.json
 require("dotenv").config();
