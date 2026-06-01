@@ -29,10 +29,13 @@ const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
 const ADMIN_ROLE_ID = mustGetEnv("ADMIN_ROLE_ID");
 
 // =====================
-// 🤖 CLIENT
+// 🤖 CLIENT (FIXED INTENTS)
 // =====================
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers
+    ]
 });
 
 // =====================
@@ -50,9 +53,9 @@ function saveDB(db) {
 }
 
 // =====================
-// 👮 ADMIN STATE
+// 🧠 ADMIN STATE (FIXED)
 // =====================
-const adminState = {};
+const adminState = new Map();
 
 // =====================
 // 🤖 READY
@@ -81,7 +84,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     let db = loadDB();
 
     // =====================
-    // 📊 PANEL (ORIGINAL LOOK)
+    // 📊 PANEL (ORIGINAL DESIGN)
     // =====================
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
@@ -113,11 +116,30 @@ LSMD Punkte-System • Buttons unten verwenden`
             );
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("p1").setLabel("🟢 Bewerber eingestellt (+1)").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId("p2").setLabel("🔵 Alleine fahren Prüfung (+2)").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("p3").setLabel("🔴 Sanitäter Prüfung (+3)").setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId("admin").setLabel("👮 Admin Panel").setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder()
+                .setCustomId("p1")
+                .setLabel("🟢 Bewerber eingestellt (+1)")
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId("p2")
+                .setLabel("🔵 Alleine fahren Prüfung (+2)")
+                .setStyle(ButtonStyle.Primary),
+
+            new ButtonBuilder()
+                .setCustomId("p3")
+                .setLabel("🔴 Sanitäter Prüfung (+3)")
+                .setStyle(ButtonStyle.Danger),
+
+            new ButtonBuilder()
+                .setCustomId("me")
+                .setLabel("📊 Meine Punkte")
+                .setStyle(ButtonStyle.Secondary),
+
+            new ButtonBuilder()
+                .setCustomId("admin")
+                .setLabel("👮 Admin Panel")
+                .setStyle(ButtonStyle.Secondary)
         );
 
         return interaction.reply({
@@ -153,7 +175,17 @@ LSMD Punkte-System • Buttons unten verwenden`
             saveDB(db);
 
             const log = await client.channels.fetch(LOG_CHANNEL_ID);
-            if (log) log.send(`📥 <@${interaction.user.id}> +${amount}`);
+
+            if (log) {
+                log.send(
+`📊 **LSMD PUNKTE VERGABE**
+👤 User: <@${interaction.user.id}>
+➕ Punkte: +${amount}
+📌 Grund: Ausbildung / Prüfung
+🏆 Neuer Stand: **${db[interaction.user.id]} Punkte**
+🕒 Zeit: <t:${Math.floor(Date.now() / 1000)}:F>`
+                );
+            }
 
             return interaction.reply({
                 content: `✅ +${amount} Punkte`,
@@ -217,9 +249,9 @@ LSMD Punkte-System • Buttons unten verwenden`
     // =====================
     if (interaction.isStringSelectMenu() && interaction.customId === "admin_user") {
 
-        adminState[interaction.user.id] = {
+        adminState.set(interaction.user.id, {
             target: interaction.values[0]
-        };
+        });
 
         return interaction.reply({
             content: `👤 Ziel: <@${interaction.values[0]}>`,
@@ -232,7 +264,7 @@ LSMD Punkte-System • Buttons unten verwenden`
     // =====================
     if (interaction.isStringSelectMenu() && interaction.customId === "admin_action") {
 
-        const state = adminState[interaction.user.id];
+        const state = adminState.get(interaction.user.id);
 
         if (!state?.target) {
             return interaction.reply({
@@ -242,13 +274,14 @@ LSMD Punkte-System • Buttons unten verwenden`
         }
 
         let amount = 0;
+        let reason = "";
 
-        if (interaction.values[0] === "add1") amount = 1;
-        if (interaction.values[0] === "add2") amount = 2;
-        if (interaction.values[0] === "add3") amount = 3;
-        if (interaction.values[0] === "rem1") amount = -1;
-        if (interaction.values[0] === "rem2") amount = -2;
-        if (interaction.values[0] === "rem3") amount = -3;
+        if (interaction.values[0] === "add1") { amount = 1; reason = "Admin +1"; }
+        if (interaction.values[0] === "add2") { amount = 2; reason = "Admin +2"; }
+        if (interaction.values[0] === "add3") { amount = 3; reason = "Admin +3"; }
+        if (interaction.values[0] === "rem1") { amount = -1; reason = "Admin -1"; }
+        if (interaction.values[0] === "rem2") { amount = -2; reason = "Admin -2"; }
+        if (interaction.values[0] === "rem3") { amount = -3; reason = "Admin -3"; }
 
         if (!db[state.target]) db[state.target] = 0;
 
@@ -258,12 +291,21 @@ LSMD Punkte-System • Buttons unten verwenden`
         saveDB(db);
 
         const log = await client.channels.fetch(LOG_CHANNEL_ID);
+
         if (log) {
-            log.send(`👮 Admin <@${state.target}> ${amount > 0 ? "+" : ""}${amount}`);
+            log.send(
+`📊 **ADMIN ACTION LOG**
+👤 Target: <@${state.target}>
+👮 Admin: <@${interaction.user.id}>
+➕ Änderung: ${amount > 0 ? "+" : ""}${amount}
+📌 Grund: ${reason}
+🏆 Neuer Stand: **${db[state.target]} Punkte**
+🕒 Zeit: <t:${Math.floor(Date.now() / 1000)}:F>`
+            );
         }
 
         return interaction.reply({
-            content: "✅ gespeichert",
+            content: "✅ Aktion gespeichert",
             ephemeral: true
         });
     }
