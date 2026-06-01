@@ -299,7 +299,34 @@ if (amount === 3) {color = 0xE74C3C;emoji = "🔴";}
 
 const ziel = 5;const stand = db[interaction.user.id];
 
-const logEmbed = new EmbedBuilder().setColor(color).setTitle(${emoji} Aktion verbucht).setDescription(<@${interaction.user.id}> hat **${reason}** erledigt.).addFields({name: "Punkte",value: +${amount},inline: true},{name: "Wochenstand",value: ${stand}/${ziel},inline: true},{name: "Status",value: stand >= ziel? "✅ Ziel erreicht": "⌛ Ziel noch nicht erreicht",inline: false}).setFooter({text: LSMD Punkte-System • ${new Date().toLocaleString("de-DE")}});
+const logEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(`${emoji} Aktion verbucht`)
+    .setDescription(
+        `<@${interaction.user.id}> hat **${reason}** erledigt.`
+    )
+    .addFields(
+        {
+            name: "Punkte",
+            value: `+${amount}`,
+            inline: true
+        },
+        {
+            name: "Wochenstand",
+            value: `${stand}/${ziel}`,
+            inline: true
+        },
+        {
+            name: "Status",
+            value: stand >= ziel
+                ? "✅ Ziel erreicht"
+                : "⌛ Ziel noch nicht erreicht",
+            inline: false
+        }
+    )
+    .setFooter({
+        text: `LSMD Punkte-System • ${new Date().toLocaleString("de-DE")}`
+    });
 
 log?.send({embeds: [logEmbed]});
 
