@@ -464,11 +464,6 @@ log?.send({
     })
     .setTimestamp();
 
-// 🟢 PUBLIC LOG
-log?.send({
-    embeds: [adminEmbed]
-});
-
 // 🔴 LEITUNG LOG (NEU)
 let leitungLog;
 try {
