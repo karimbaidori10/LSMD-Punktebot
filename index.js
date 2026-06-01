@@ -49,8 +49,8 @@ for (const user of users) {
 
 return result;
 
-}// =====================client.once(Events.ClientReady, async () => {
-
+client.once(Events.ClientReady, async () => {
+    
 await mongo.connect();
 
 const db = mongo.db("lsmd");
