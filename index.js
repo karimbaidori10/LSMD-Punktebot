@@ -104,6 +104,51 @@ client.on(Events.InteractionCreate, async (interaction) => {
         embeds: [leaderboardEmbed]
     });
 }
+
+    if (interaction.isChatInputCommand() && interaction.commandName === "addpoints") {
+
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+
+    if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
+        return interaction.reply({
+            content: "❌ Keine Berechtigung.",
+            ephemeral: true
+        });
+    }
+
+    const target = interaction.options.getUser("user");
+    const points = interaction.options.getInteger("points");
+
+    if (!db[target.id]) db[target.id] = 0;
+
+    db[target.id] += points;
+
+    if (db[target.id] < 0) db[target.id] = 0;
+
+    saveDB(db);
+
+    const logEmbed = new EmbedBuilder()
+        .setColor(0x3498db)
+        .setTitle("📊 LSMD Punkte Änderung")
+        .addFields(
+            { name: "👤 User", value: `<@${target.id}>`, inline: true },
+            { name: "👮 Admin", value: `<@${interaction.user.id}>`, inline: true },
+            { name: "➕ Änderung", value: `${points}`, inline: true },
+            { name: "🏆 Neuer Stand", value: `${db[target.id]} Punkte` }
+        )
+        .setTimestamp();
+
+    const log = await client.channels.fetch(LOG_CHANNEL_ID);
+
+    if (log) {
+        await log.send({ embeds: [logEmbed] });
+    }
+
+    return interaction.reply({
+        content: `✅ ${points} Punkte für ${target.tag} verbucht.\n🏆 Neuer Stand: ${db[target.id]} Punkte`,
+        ephemeral: true
+    });
+}
     // =====================
     // 📊 PANEL 
     // =====================
