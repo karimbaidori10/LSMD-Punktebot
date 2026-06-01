@@ -344,8 +344,7 @@ log?.send({
                 });
             }
 
-            const members = await interaction.guild.members.fetch();
-
+            const members = await interaction.guild.members.fetch({ limit: 100 });
             const options = members
                 .filter(m => !m.user.bot)
                 .map(m => ({
