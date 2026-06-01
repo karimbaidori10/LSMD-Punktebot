@@ -205,12 +205,23 @@ LSMD Punkte-System • Buttons unten verwenden`
 
         if (!db[interaction.user.id]) db[interaction.user.id] = 0;
 
-        let amount = 0;
+       let amount = 0;
+let reason = "";
 
-        // 🟢 ALLE dürfen Punkte bekommen
-        if (interaction.customId === "p1") amount = 1;
-        if (interaction.customId === "p2") amount = 2;
-        if (interaction.customId === "p3") amount = 3;
+if (interaction.customId === "p1") {
+    amount = 1;
+    reason = "Bewerber eingestellt";
+}
+
+if (interaction.customId === "p2") {
+    amount = 2;
+    reason = "Alleine fahren Prüfung";
+}
+
+if (interaction.customId === "p3") {
+    amount = 3;
+    reason = "Sanitäter Prüfung";
+}
 
         if (amount > 0) {
             db[interaction.user.id] += amount;
