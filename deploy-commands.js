@@ -2,6 +2,14 @@ require("dotenv").config();
 
 const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
+// Debug
+console.log("CLIENT_ID =", process.env.CLIENT_ID);
+console.log("GUILD_ID  =", process.env.GUILD_ID);
+console.log(
+    "TOKEN OK?  =",
+    process.env.DISCORD_TOKEN ? "JA" : "NEIN"
+);
+
 const commands = [
     new SlashCommandBuilder()
         .setName("panel")
@@ -14,19 +22,26 @@ const commands = [
     new SlashCommandBuilder()
         .setName("addpoints")
         .setDescription("Gibt einem User Punkte (Admin)")
-        .addUserOption(opt =>
-            opt.setName("user").setDescription("User").setRequired(true)
+        .addUserOption(option =>
+            option
+                .setName("user")
+                .setDescription("User auswählen")
+                .setRequired(true)
         )
-        .addIntegerOption(opt =>
-            opt.setName("points").setDescription("Punkte").setRequired(true)
+        .addIntegerOption(option =>
+            option
+                .setName("points")
+                .setDescription("Anzahl Punkte")
+                .setRequired(true)
         )
-].map(c => c.toJSON());
+].map(command => command.toJSON());
 
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({ version: "10" })
+    .setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
     try {
-        console.log("⏳ Registriere Commands...");
+        console.log("⏳ Registriere Slash Commands...");
 
         await rest.put(
             Routes.applicationGuildCommands(
@@ -36,8 +51,13 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
             { body: commands }
         );
 
-        console.log("✅ Commands fertig!");
-    } catch (err) {
-        console.error(err);
+        console.log("✅ Slash Commands registriert!");
+        console.log("📌 Registriert:");
+        console.log("/panel");
+        console.log("/leaderboard");
+        console.log("/addpoints");
+    } catch (error) {
+        console.error("❌ Fehler:");
+        console.error(error);
     }
 })();
