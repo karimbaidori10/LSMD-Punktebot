@@ -18,7 +18,7 @@ const {
 function mustGetEnv(name) {
     const value = process.env[name];
     if (!value) {
-        console.error(`❌ FEHLER: ${name} fehlt in .env / Railway`);
+        console.error(`❌ FEHLER: ${name} fehlt in .env`);
         process.exit(1);
     }
     return value;
@@ -26,7 +26,9 @@ function mustGetEnv(name) {
 
 const TOKEN = mustGetEnv("DISCORD_TOKEN");
 const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
-const ROLE_NAME = process.env.ROLE_NAME;
+
+// 🔥 WICHTIG FIX: hardcoded (kein Role Bug mehr)
+const ROLE_NAME = "Prakti-Sani-Leitung";
 
 // =====================
 // 🤖 CLIENT
@@ -68,27 +70,20 @@ setInterval(() => {
     const now = new Date();
 
     if (now.getDay() === 0 && now.getHours() === 19 && now.getMinutes() === 30) {
-        let db = loadDB();
-
-        for (const id in db) {
-            db[id] = 0;
-        }
-
-        saveDB(db);
-
-        console.log("🔁 Weekly Reset ausgeführt");
+        saveDB({});
+        console.log("🔁 Weekly Reset DONE");
     }
 }, 60000);
 
 // =====================
-// 🚑 INTERACTIONS
+// 🚑 MAIN
 // =====================
 client.on(Events.InteractionCreate, async (interaction) => {
 
     let db = loadDB();
 
     // =====================
-    // 📊 PANEL
+    // 📊 PANEL (ORIGINAL DESIGN)
     // =====================
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
@@ -97,52 +92,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
             .setColor(0x2ecc71)
             .setDescription(
 `Wochenziel: 5 Punkte pro Ausbilder
+Vergib deine Punkte über die Buttons unten.
 
-🟢 Bewerber eingestellt → +1  
-🔵 Alleine fahren Prüfung → +2  
-🔴 Sanitäter Prüfung → +3  
+Wertungen:
+🟢 Bewerber eingestellt → +1
+🔵 Alleine fahren Prüfung → +2
+🔴 Sanitäter Prüfung → +3
 
-📌 LSMD System`
+📌 Hinweis: Nur mit der Rolle PraktiSani klickbar.
+🕒 Report: Sonntag 19:25 · Reset: Sonntag 19:30
+
+LSMD Punkte-System • Buttons unten verwenden`
             );
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("p1").setLabel("+1").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId("p2").setLabel("+2").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("p3").setLabel("+3").setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId("me").setLabel("Meine Stats").setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId("admin").setLabel("Admin Panel").setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("p2").setLabel("🔵 +2").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("p3").setLabel("🔴 +3").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId("admin").setLabel("👮 Admin").setStyle(ButtonStyle.Secondary)
         );
 
         return interaction.reply({ embeds: [embed], components: [row] });
-    }
-
-    // =====================
-    // 📊 TOP 5 STATS
-    // =====================
-    if (interaction.isChatInputCommand() && interaction.commandName === "stats") {
-
-        const sorted = Object.entries(db)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
-        const embed = new EmbedBuilder()
-            .setTitle("🏆 LSMD Top 5")
-            .setColor(0xf1c40f)
-            .setDescription(
-                sorted.length
-                    ? sorted.map((u, i) =>
-                        `**${i + 1}.** <@${u[0]}> — ${u[1]} Punkte`
-                    ).join("\n")
-                    : "Keine Daten"
-            );
-
-        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-        if (logChannel) logChannel.send({ embeds: [embed] });
-
-        return interaction.reply({
-            content: "📊 Top 5 im Log Channel gepostet",
-            ephemeral: true
-        });
     }
 
     // =====================
@@ -150,7 +121,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // =====================
     if (interaction.isButton()) {
 
-        if (!interaction.member.roles.cache.some(r => r.name === ROLE_NAME)) {
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+
+        if (!member.roles.cache.some(r => r.name === ROLE_NAME)) {
             return interaction.reply({ content: "❌ Keine Berechtigung", ephemeral: true });
         }
 
@@ -167,7 +140,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             saveDB(db);
 
             const log = await client.channels.fetch(LOG_CHANNEL_ID);
-            if (log) log.send(`📥 <@${interaction.user.id}> +${amount} Punkte`);
+            if (log) log.send(`📥 <@${interaction.user.id}> +${amount}`);
 
             return interaction.reply({
                 content: `✅ +${amount} Punkte`,
@@ -177,17 +150,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         if (interaction.customId === "me") {
             return interaction.reply({
-                content: `📊 Deine Punkte: ${db[interaction.user.id] || 0}`,
+                content: `📊 Punkte: ${db[interaction.user.id] || 0}`,
                 ephemeral: true
             });
         }
 
         // =====================
-        // 👮 ADMIN PANEL
+        // 👮 ADMIN PANEL OPEN
         // =====================
         if (interaction.customId === "admin") {
 
-            const members = interaction.guild.members.cache
+            const members = await interaction.guild.members.fetch();
+
+            const options = members
                 .filter(m => !m.user.bot)
                 .map(m => ({
                     label: m.user.username,
@@ -199,7 +174,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 new StringSelectMenuBuilder()
                     .setCustomId("admin_user")
                     .setPlaceholder("👤 User auswählen")
-                    .addOptions(members)
+                    .addOptions(options)
             );
 
             const actionSelect = new ActionRowBuilder().addComponents(
@@ -207,27 +182,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
                     .setCustomId("admin_action")
                     .setPlaceholder("⚙️ Aktion wählen")
                     .addOptions([
-                        { label: "+1 Punkt", value: "add1" },
-                        { label: "+2 Punkte", value: "add2" },
-                        { label: "+3 Punkte", value: "add3" },
-                        { label: "-1 Punkt", value: "rem1" },
-                        { label: "-2 Punkte", value: "rem2" },
-                        { label: "-3 Punkte", value: "rem3" }
+                        { label: "+1", value: "add1" },
+                        { label: "+2", value: "add2" },
+                        { label: "+3", value: "add3" },
+                        { label: "-1", value: "rem1" },
+                        { label: "-2", value: "rem2" },
+                        { label: "-3", value: "rem3" }
                     ])
             );
 
             return interaction.reply({
-                content: "👮 Admin Control Panel",
+                content: "👮 Admin Panel",
                 components: [userSelect, actionSelect],
                 ephemeral: true
             });
         }
-
-        saveDB(db);
     }
 
     // =====================
-    // 👤 USER SELECT
+    // 👤 SELECT USER
     // =====================
     if (interaction.isStringSelectMenu() && interaction.customId === "admin_user") {
 
@@ -236,13 +209,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
         };
 
         return interaction.reply({
-            content: `👤 User: <@${interaction.values[0]}>`,
+            content: `👤 Ziel: <@${interaction.values[0]}>`,
             ephemeral: true
         });
     }
 
     // =====================
-    // ⚙️ ACTION SELECT
+    // ⚙️ SELECT ACTION
     // =====================
     if (interaction.isStringSelectMenu() && interaction.customId === "admin_action") {
 
@@ -273,17 +246,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         const log = await client.channels.fetch(LOG_CHANNEL_ID);
         if (log) {
-            log.send(`👮 Admin: <@${state.target}> ${amount > 0 ? "+" : ""}${amount}`);
+            log.send(`👮 Admin <@${state.target}> ${amount > 0 ? "+" : ""}${amount}`);
         }
 
         return interaction.reply({
-            content: "✅ Gespeichert",
+            content: "✅ gespeichert",
             ephemeral: true
         });
     }
 });
 
-// =====================
-// 🔑 LOGIN
 // =====================
 client.login(TOKEN);
