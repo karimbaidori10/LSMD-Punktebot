@@ -1,5 +1,5 @@
 require("dotenv").config();
-const fs = require("fs");
+const { MongoClient } = require("mongodb");
 
 const {
     Client,
@@ -37,22 +37,59 @@ const client = new Client({
 });
 
 // =====================
-const DB_FILE = "./database.json";
 const adminState = new Map();
+const mongo = new MongoClient(process.env.MONGO_URI);
 
-// =====================
-function loadDB() {
-    if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, "{}");
-    return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+let pointsCollection;
+async function getPoints(userId) {
+
+    const data = await pointsCollection.findOne({
+        userId
+    });
+
+    return data?.points || 0;
 }
 
-function saveDB(db) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+async function setPoints(userId, points) {
+
+    await pointsCollection.updateOne(
+        { userId },
+        {
+            $set: {
+                userId,
+                points
+            }
+        },
+        {
+            upsert: true
+        }
+    );
 }
 
+async function getAllPoints() {
+
+    const users = await pointsCollection.find({}).toArray();
+
+    const result = {};
+
+    for (const user of users) {
+        result[user.userId] = user.points;
+    }
+
+    return result;
+}
 // =====================
-client.once(Events.ClientReady, () => {
+client.once(Events.ClientReady, async () => {
+
+    await mongo.connect();
+
+    const db = mongo.db("lsmd");
+
+    pointsCollection = db.collection("points");
+
+    console.log("✅ MongoDB verbunden");
     console.log(`🤖 Online als ${client.user.tag}`);
+});
 });
 
 // =====================
