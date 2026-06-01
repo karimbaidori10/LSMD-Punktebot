@@ -48,6 +48,7 @@ for (const user of users) {
 }
 
 return result;
+}
 
 client.once(Events.ClientReady, async () => {
     
