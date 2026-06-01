@@ -470,9 +470,28 @@ if (interaction.isStringSelectMenu() && interaction.customId === "admin_action")
 })
 .setTimestamp();
 
-// 🔴 LEITUNG LOG (NEU)let leitungLog;try {leitungLog = await client.channels.fetch(LEITUNG_LOG_CHANNEL_ID);} catch {}
+// 🔴 LEITUNG LOG (NEU)
 
-leitungLog?.send({embeds: [new EmbedBuilder().setColor(0xE74C3C).setTitle("🔒 Leitungs Aktion").addFields({ name: "User", value: <@${state.target}>, inline: true },{ name: "Admin", value: <@${interaction.user.id}>, inline: true },{ name: "Änderung", value: ${amount}, inline: true },{ name: "Neuer Stand", value: ${db[state.target]} Punkte }).setTimestamp()]});
+let leitungLog;
+
+try {
+    leitungLog = await client.channels.fetch(LEITUNG_LOG_CHANNEL_ID);
+} catch {}
+
+leitungLog?.send({
+    embeds: [
+        new EmbedBuilder()
+            .setColor(0xE74C3C)
+            .setTitle("🔒 Leitungs Aktion")
+            .addFields(
+                { name: "User", value: `<@${state.target}>`, inline: true },
+                { name: "Admin", value: `<@${interaction.user.id}>`, inline: true },
+                { name: "Änderung", value: `${amount}`, inline: true },
+                { name: "Neuer Stand", value: `${db[state.target]} Punkte` }
+            )
+            .setTimestamp()
+    ]
+});
 
     return interaction.reply({
         content: "✅ Aktion gespeichert",
