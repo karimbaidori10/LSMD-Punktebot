@@ -218,12 +218,35 @@ LSMD Punkte-System • Buttons unten verwenden`
 
             const log = await client.channels.fetch(LOG_CHANNEL_ID);
 
-            log?.send(
-`📊 LSMD LOG
-👤 User: <@${interaction.user.id}>
-➕ +${amount}
-🏆 Gesamt: ${db[interaction.user.id]}`
-            );
+            const logEmbed = new EmbedBuilder()
+    .setColor(0x2ECC71)
+    .setTitle("🚑 LSMD • Punkte eingetragen")
+    .setThumbnail(interaction.user.displayAvatarURL())
+    .addFields(
+        {
+            name: "👤 Ausbilder",
+            value: `<@${interaction.user.id}>`,
+            inline: true
+        },
+        {
+            name: "➕ Vergebene Punkte",
+            value: `+${amount}`,
+            inline: true
+        },
+        {
+            name: "🏆 Aktueller Punktestand",
+            value: `${db[interaction.user.id]} Punkte`,
+            inline: true
+        }
+    )
+    .setFooter({
+        text: "LSMD Punkte-System"
+    })
+    .setTimestamp();
+
+log?.send({
+    embeds: [logEmbed]
+});
 
             return interaction.reply({
                 content: `✅ +${amount} Punkte`,
@@ -338,13 +361,39 @@ LSMD Punkte-System • Buttons unten verwenden`
 
         const log = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        log?.send(
-`📊 ADMIN LOG
-👤 Target: <@${state.target}>
-👮 Admin: <@${interaction.user.id}>
-⚙️ Änderung: ${amount}
-🏆 Neuer Stand: ${db[state.target]}`
-        );
+        const adminEmbed = new EmbedBuilder()
+    .setColor(amount > 0 ? 0x3498DB : 0xE74C3C)
+    .setTitle("👮 LSMD • Admin Aktion")
+    .addFields(
+        {
+            name: "👤 Betroffener User",
+            value: `<@${state.target}>`,
+            inline: true
+        },
+        {
+            name: "👮 Administrator",
+            value: `<@${interaction.user.id}>`,
+            inline: true
+        },
+        {
+            name: "⚙️ Änderung",
+            value: `${amount > 0 ? "+" : ""}${amount}`,
+            inline: true
+        },
+        {
+            name: "🏆 Neuer Punktestand",
+            value: `${db[state.target]} Punkte`,
+            inline: false
+        }
+    )
+    .setFooter({
+        text: "LSMD Admin-System"
+    })
+    .setTimestamp();
+
+log?.send({
+    embeds: [adminEmbed]
+});
 
         return interaction.reply({
             content: "✅ Aktion gespeichert",
