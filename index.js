@@ -90,7 +90,7 @@ client.once(Events.ClientReady, async () => {
     console.log("✅ MongoDB verbunden");
     console.log(`🤖 Online als ${client.user.tag}`);
 });
-});
+
 
 // =====================
 setInterval(() => {
