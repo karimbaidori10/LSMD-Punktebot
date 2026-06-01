@@ -1,3 +1,4 @@
+// cache-bust: force rebuild with current package-lock.json
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
 
