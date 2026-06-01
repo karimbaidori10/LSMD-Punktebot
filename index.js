@@ -94,11 +94,14 @@ client.once(Events.ClientReady, async () => {
 
 
 // =====================
-setInterval(() => {
+setInterval(async () => {
     const now = new Date();
 
     if (now.getDay() === 0 && now.getHours() === 19 && now.getMinutes() === 30) {
-        saveDB({});
+        const allPoints = await getAllPoints();
+        for (const userId of Object.keys(allPoints)) {
+            await setPoints(userId, 0);
+        }
         console.log("🔁 Weekly Reset DONE");
     }
 }, 60000);
@@ -106,7 +109,7 @@ setInterval(() => {
 // =====================
 client.on(Events.InteractionCreate, async (interaction) => {
 
-    let db = loadDB();
+    let db = await getAllPoints();
 
     if (interaction.isChatInputCommand() && interaction.commandName === "leaderboard") {
 
@@ -163,7 +166,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (db[target.id] < 0) db[target.id] = 0;
 
-    saveDB(db);
+    await setPoints(target.id, db[target.id]);
 
     const logEmbed = new EmbedBuilder()
         .setColor(0x3498db)
@@ -263,7 +266,7 @@ if (interaction.customId === "p3") {
 
         if (amount > 0) {
             db[interaction.user.id] += amount;
-            saveDB(db);
+            await setPoints(interaction.user.id, db[interaction.user.id]);
 
             const log = await client.channels.fetch(LOG_CHANNEL_ID);
 
@@ -425,7 +428,7 @@ log?.send({
         db[state.target] += amount;
         if (db[state.target] < 0) db[state.target] = 0;
 
-        saveDB(db);
+        await setPoints(state.target, db[state.target]);
 
         const log = await client.channels.fetch(LOG_CHANNEL_ID);
 
