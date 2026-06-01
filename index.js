@@ -70,6 +70,40 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     let db = loadDB();
 
+    if (interaction.isChatInputCommand() && interaction.commandName === "leaderboard") {
+
+    const sorted = Object.entries(db)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    const leaderboardEmbed = new EmbedBuilder()
+        .setColor(0xF1C40F)
+        .setTitle("🏆 LSMD Leaderboard")
+        .setTimestamp();
+
+    let description = "";
+
+    if (sorted.length === 0) {
+        description = "Keine Daten vorhanden.";
+    } else {
+        for (let i = 0; i < sorted.length; i++) {
+            const [userId, points] = sorted[i];
+
+            let medal = "🔹";
+            if (i === 0) medal = "🥇";
+            if (i === 1) medal = "🥈";
+            if (i === 2) medal = "🥉";
+
+            description += `${medal} <@${userId}> — **${points} Punkte**\n`;
+        }
+    }
+
+    leaderboardEmbed.setDescription(description);
+
+    return interaction.reply({
+        embeds: [leaderboardEmbed]
+    });
+}
     // =====================
     // 📊 PANEL 
     // =====================
