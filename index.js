@@ -165,17 +165,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
         });
     }
 
-        if (interaction.isChatInputCommand() && interaction.commandName === "removepoints") {
-
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-
-    if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
-        return interaction.reply({
-            content: "❌ Keine Berechtigung.",
-            ephemeral: true
-        });
-    }
-
     const target = interaction.options.getUser("user");
     const points = interaction.options.getInteger("points");
 
