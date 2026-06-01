@@ -121,6 +121,7 @@ return interaction.reply({
 
 if (interaction.isChatInputCommand() && interaction.commandName === "addpoints") {
 
+```
 const member = await interaction.guild.members.fetch(interaction.user.id);
 
 if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
@@ -135,24 +136,25 @@ const points = interaction.options.getInteger("points");
 
 if (!db[target.id]) db[target.id] = 0;
 
-db[target.id] -= points;
+db[target.id] += points;
 
 if (db[target.id] < 0) db[target.id] = 0;
 
 await setPoints(target.id, db[target.id]);
 
 const logEmbed = new EmbedBuilder()
-    .setColor(0xE74C3C)
-    .setTitle("📉 LSMD Punkte entfernt")
+    .setColor(0x3498db)
+    .setTitle("📊 LSMD Punkte Änderung")
     .addFields(
         { name: "👤 User", value: `<@${target.id}>`, inline: true },
-        { name: "👮 Leitung", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "➖ Entfernt", value: `${points}`, inline: true },
+        { name: "👮 Admin", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "➕ Änderung", value: `${points}`, inline: true },
         { name: "🏆 Neuer Stand", value: `${db[target.id]} Punkte` }
     )
     .setTimestamp();
 
 let leitungLog;
+
 try {
     leitungLog = await client.channels.fetch(LEITUNG_LOG_CHANNEL_ID);
 } catch {}
@@ -162,11 +164,13 @@ if (leitungLog) {
 }
 
 return interaction.reply({
-    content: `✅ ${points} Punkte von ${target.tag} entfernt.\n🏆 Neuer Stand: ${db[target.id]} Punkte`,
+    content: `✅ ${points} Punkte für ${target.tag} verbucht.\n🏆 Neuer Stand: ${db[target.id]} Punkte`,
     ephemeral: true
 });
+```
 
 }
+
 
 const target = interaction.options.getUser("user");
 const points = interaction.options.getInteger("points");
