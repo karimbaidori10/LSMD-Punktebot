@@ -89,6 +89,7 @@ client.once(Events.ClientReady, async () => {
     pointsCollection = db.collection("points");
 
     console.log("✅ MongoDB verbunden");
+    console.log("✅ Collection:", pointsCollection.collectionName);
     console.log(`🤖 Online als ${client.user.tag}`);
 });
 
