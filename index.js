@@ -29,7 +29,7 @@ const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
 const ADMIN_ROLE_ID = mustGetEnv("ADMIN_ROLE_ID");
 
 // =====================
-// 🤖 CLIENT (FIXED INTENTS)
+// 🤖 CLIENT
 // =====================
 const client = new Client({
     intents: [
@@ -53,7 +53,7 @@ function saveDB(db) {
 }
 
 // =====================
-// 🧠 ADMIN STATE (FIXED)
+// 🧠 ADMIN STATE
 // =====================
 const adminState = new Map();
 
@@ -65,7 +65,7 @@ client.once(Events.ClientReady, () => {
 });
 
 // =====================
-// 🔁 WEEK RESET
+// 🔁 SAFE WEEK RESET (stabil)
 // =====================
 setInterval(() => {
     const now = new Date();
@@ -77,14 +77,14 @@ setInterval(() => {
 }, 60000);
 
 // =====================
-// 🚑 MAIN
+// 🚑 INTERACTIONS
 // =====================
 client.on(Events.InteractionCreate, async (interaction) => {
 
     let db = loadDB();
 
     // =====================
-    // 📊 PANEL (ORIGINAL DESIGN)
+    // 📊 PANEL COMMAND
     // =====================
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
@@ -109,37 +109,17 @@ Wertungen:
 🔵 Alleine fahren Prüfung → +2
 🔴 Sanitäter Prüfung → +3
 
-📌 Hinweis: Nur mit der Rolle PraktiSani klickbar.
 🕒 Report: Sonntag 19:25 · Reset: Sonntag 19:30
 
-LSMD Punkte-System • Buttons unten verwenden`
+LSMD Punkte-System`
             );
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("p1")
-                .setLabel("🟢 Bewerber eingestellt (+1)")
-                .setStyle(ButtonStyle.Success),
-
-            new ButtonBuilder()
-                .setCustomId("p2")
-                .setLabel("🔵 Alleine fahren Prüfung (+2)")
-                .setStyle(ButtonStyle.Primary),
-
-            new ButtonBuilder()
-                .setCustomId("p3")
-                .setLabel("🔴 Sanitäter Prüfung (+3)")
-                .setStyle(ButtonStyle.Danger),
-
-            new ButtonBuilder()
-                .setCustomId("me")
-                .setLabel("📊 Meine Punkte")
-                .setStyle(ButtonStyle.Secondary),
-
-            new ButtonBuilder()
-                .setCustomId("admin")
-                .setLabel("👮 Admin Panel")
-                .setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1 Bewerber").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("p2").setLabel("🔵 +2 Prüfung").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("p3").setLabel("🔴 +3 Sanitäter").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId("admin").setLabel("👮 Admin Panel").setStyle(ButtonStyle.Secondary)
         );
 
         return interaction.reply({
@@ -149,17 +129,45 @@ LSMD Punkte-System • Buttons unten verwenden`
     }
 
     // =====================
-    // 🔘 BUTTONS
+    // 🏆 LEADERBOARD COMMAND
+    // =====================
+    if (interaction.isChatInputCommand() && interaction.commandName === "leaderboard") {
+
+        const sorted = Object.entries(db)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        const embed = new EmbedBuilder()
+            .setTitle("🏆 LSMD Leaderboard")
+            .setColor(0xf1c40f);
+
+        let text = "";
+
+        sorted.forEach(([id, pts], i) => {
+            text += `**${i + 1}.** <@${id}> — ${pts} Punkte\n`;
+        });
+
+        embed.setDescription(text || "Keine Daten");
+
+        return interaction.reply({ embeds: [embed] });
+    }
+
+    // =====================
+    // 🔘 BUTTONS (FIXED PERMISSION SYSTEM)
     // =====================
     if (interaction.isButton()) {
 
         const member = await interaction.guild.members.fetch(interaction.user.id);
+        const isAdmin = member.roles.cache.has(ADMIN_ROLE_ID);
 
-        if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
-            return interaction.reply({
-                content: "❌ Keine Berechtigung",
-                ephemeral: true
-            });
+        // nur Admin Actions blocken
+        if (["p1", "p2", "p3", "admin"].includes(interaction.customId)) {
+            if (!isAdmin) {
+                return interaction.reply({
+                    content: "❌ Keine Berechtigung",
+                    ephemeral: true
+                });
+            }
         }
 
         if (!db[interaction.user.id]) db[interaction.user.id] = 0;
@@ -170,7 +178,11 @@ LSMD Punkte-System • Buttons unten verwenden`
         if (interaction.customId === "p2") amount = 2;
         if (interaction.customId === "p3") amount = 3;
 
+        // =====================
+        // ➕ POINTS
+        // =====================
         if (amount > 0) {
+
             db[interaction.user.id] += amount;
             saveDB(db);
 
@@ -178,34 +190,36 @@ LSMD Punkte-System • Buttons unten verwenden`
 
             if (log) {
                 log.send(
-`📊 **LSMD PUNKTE VERGABE**
+`📊 LSMD PUNKTE
 👤 User: <@${interaction.user.id}>
-➕ Punkte: +${amount}
-📌 Grund: Ausbildung / Prüfung
-🏆 Neuer Stand: **${db[interaction.user.id]} Punkte**
-🕒 Zeit: <t:${Math.floor(Date.now() / 1000)}:F>`
+➕ +${amount} Punkte
+🏆 Stand: ${db[interaction.user.id]}
+🕒 <t:${Math.floor(Date.now() / 1000)}:F>`
                 );
             }
 
             return interaction.reply({
-                content: `✅ +${amount} Punkte`,
-                ephemeral: true
-            });
-        }
-
-        if (interaction.customId === "me") {
-            return interaction.reply({
-                content: `📊 Punkte: ${db[interaction.user.id] || 0}`,
+                content: `✅ +${amount} Punkte | Gesamt: ${db[interaction.user.id]}`,
                 ephemeral: true
             });
         }
 
         // =====================
-        // 👮 ADMIN PANEL OPEN
+        // 📊 ME
+        // =====================
+        if (interaction.customId === "me") {
+            return interaction.reply({
+                content: `📊 Deine Punkte: **${db[interaction.user.id] || 0}**`,
+                ephemeral: true
+            });
+        }
+
+        // =====================
+        // 👮 ADMIN PANEL
         // =====================
         if (interaction.customId === "admin") {
 
-            const members = await interaction.guild.members.fetch();
+            const members = await interaction.guild.members.fetch({ limit: 50 });
 
             const options = members
                 .filter(m => !m.user.bot)
@@ -254,7 +268,7 @@ LSMD Punkte-System • Buttons unten verwenden`
         });
 
         return interaction.reply({
-            content: `👤 Ziel: <@${interaction.values[0]}>`,
+            content: `👤 Ziel gesetzt: <@${interaction.values[0]}>`,
             ephemeral: true
         });
     }
@@ -276,12 +290,14 @@ LSMD Punkte-System • Buttons unten verwenden`
         let amount = 0;
         let reason = "";
 
-        if (interaction.values[0] === "add1") { amount = 1; reason = "Admin +1"; }
-        if (interaction.values[0] === "add2") { amount = 2; reason = "Admin +2"; }
-        if (interaction.values[0] === "add3") { amount = 3; reason = "Admin +3"; }
-        if (interaction.values[0] === "rem1") { amount = -1; reason = "Admin -1"; }
-        if (interaction.values[0] === "rem2") { amount = -2; reason = "Admin -2"; }
-        if (interaction.values[0] === "rem3") { amount = -3; reason = "Admin -3"; }
+        const val = interaction.values[0];
+
+        if (val === "add1") { amount = 1; reason = "Admin +1"; }
+        if (val === "add2") { amount = 2; reason = "Admin +2"; }
+        if (val === "add3") { amount = 3; reason = "Admin +3"; }
+        if (val === "rem1") { amount = -1; reason = "Admin -1"; }
+        if (val === "rem2") { amount = -2; reason = "Admin -2"; }
+        if (val === "rem3") { amount = -3; reason = "Admin -3"; }
 
         if (!db[state.target]) db[state.target] = 0;
 
@@ -294,21 +310,23 @@ LSMD Punkte-System • Buttons unten verwenden`
 
         if (log) {
             log.send(
-`📊 **ADMIN ACTION LOG**
+`📊 ADMIN LOG
 👤 Target: <@${state.target}>
 👮 Admin: <@${interaction.user.id}>
-➕ Änderung: ${amount > 0 ? "+" : ""}${amount}
-📌 Grund: ${reason}
-🏆 Neuer Stand: **${db[state.target]} Punkte**
-🕒 Zeit: <t:${Math.floor(Date.now() / 1000)}:F>`
+⚙️ Änderung: ${amount}
+🏆 Neuer Stand: ${db[state.target]}
+🕒 <t:${Math.floor(Date.now() / 1000)}:F>`
             );
         }
 
         return interaction.reply({
-            content: "✅ Aktion gespeichert",
+            content: "✅ Admin Aktion gespeichert",
             ephemeral: true
         });
     }
 });
 
+// =====================
+// 🔑 LOGIN
+// =====================
 client.login(TOKEN);
