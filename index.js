@@ -182,11 +182,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         )
         .setTimestamp();
 
-    const log = await client.channels.fetch(LOG_CHANNEL_ID);
+    let leitungLog;
+try {
+    leitungLog = await client.channels.fetch(LEITUNG_LOG_CHANNEL_ID);
+} catch {}
 
-    if (log) {
-        await log.send({ embeds: [logEmbed] });
-    }
+if (leitungLog) {
+    await leitungLog.send({ embeds: [logEmbed] });
+}
 
     return interaction.reply({
         content: `✅ ${points} Punkte für ${target.tag} verbucht.\n🏆 Neuer Stand: ${db[target.id]} Punkte`,
