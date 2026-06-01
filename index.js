@@ -78,7 +78,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const leaderboardEmbed = new EmbedBuilder()
         .setColor(0xF1C40F)
-        .setTitle("🏆 LSMD Leaderboard")
+        .setTitle("🏆 Prakti Sani Punkte Leaderboard")
         .setTimestamp();
 
     let description = "";
