@@ -33,6 +33,22 @@ const commands = [
                 .setName("points")
                 .setDescription("Anzahl Punkte")
                 .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
+        .setName("removepoints")
+        .setDescription("Entfernt einem User Punkte (Admin)")
+        .addUserOption(option =>
+            option
+                .setName("user")
+                .setDescription("User auswählen")
+                .setRequired(true)
+        )
+        .addIntegerOption(option =>
+            option
+                .setName("points")
+                .setDescription("Anzahl Punkte")
+                .setRequired(true)
         )
 ].map(command => command.toJSON());
 
@@ -56,6 +72,7 @@ const rest = new REST({ version: "10" })
         console.log("/panel");
         console.log("/leaderboard");
         console.log("/addpoints");
+        console.log("/removepoints");
     } catch (error) {
         console.error("❌ Fehler:");
         console.error(error);
