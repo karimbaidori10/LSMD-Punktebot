@@ -131,15 +131,6 @@ if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
     });
 }
 
-const target = interaction.options.getUser("user");
-const points = interaction.options.getInteger("points");
-
-if (!db[target.id]) db[target.id] = 0;
-
-db[target.id] += points;
-
-if (db[target.id] < 0) db[target.id] = 0;
-
 await setPoints(target.id, db[target.id]);
 
 const logEmbed = new EmbedBuilder()
