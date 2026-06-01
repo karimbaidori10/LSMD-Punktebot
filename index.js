@@ -1,14 +1,50 @@
-// cache-bust: force rebuild with current package-lock.jsonrequire("dotenv").config();const { MongoClient } = require("mongodb");
+// cache-bust: force rebuild with current package-lock.json
+require("dotenv").config();
+const { MongoClient } = require("mongodb");
 
-const {Client,GatewayIntentBits,Events,EmbedBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle,StringSelectMenuBuilder} = require("discord.js");
+const {
+    Client,
+    GatewayIntentBits,
+    Events,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder
+} = require("discord.js");
 
-// =====================// 🔐 ENV SAFE// =====================function mustGetEnv(name) {const value = process.env[name];if (!value) {console.error(❌ FEHLER: ${name} fehlt in .env);process.exit(1);}return value;}
+// =====================
+// 🔐 ENV SAFE
+// =====================
+function mustGetEnv(name) {
+    const value = process.env[name];
 
-const TOKEN = mustGetEnv("DISCORD_TOKEN");const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");const ADMIN_ROLE_ID = mustGetEnv("ADMIN_ROLE_ID");const MONGO_URI = mustGetEnv("MONGO_URI");const LEITUNG_LOG_CHANNEL_ID = mustGetEnv("LEITUNG_LOG_CHANNEL_ID");
+    if (!value) {
+        console.error(`❌ FEHLER: ${name} fehlt in .env`);
+        process.exit(1);
+    }
 
-// =====================const client = new Client({intents: [GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers]});
+    return value;
+}
 
-// =====================const adminState = new Map();const handledInteractions = new Set();const mongo = new MongoClient(process.env.MONGO_URI);
+const TOKEN = mustGetEnv("DISCORD_TOKEN");
+const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
+const ADMIN_ROLE_ID = mustGetEnv("ADMIN_ROLE_ID");
+const MONGO_URI = mustGetEnv("MONGO_URI");
+const LEITUNG_LOG_CHANNEL_ID = mustGetEnv("LEITUNG_LOG_CHANNEL_ID");
+
+// =====================
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers
+    ]
+});
+
+// =====================
+const adminState = new Map();
+const handledInteractions = new Set();
+const mongo = new MongoClient(MONGO_URI);
 
 let pointsCollection;async function getPoints(userId) {
 
