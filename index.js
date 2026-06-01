@@ -28,6 +28,8 @@ function mustGetEnv(name) {
 const TOKEN = mustGetEnv("DISCORD_TOKEN");
 const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
 const ADMIN_ROLE_ID = mustGetEnv("ADMIN_ROLE_ID");
+const MONGO_URI = mustGetEnv("MONGO_URI");
+const LEITUNG_LOG_CHANNEL_ID = mustGetEnv("LEITUNG_LOG_CHANNEL_ID");
 
 // =====================
 const client = new Client({
