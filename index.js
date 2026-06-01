@@ -8,53 +8,56 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    StringSelectMenuBuilder
 } = require("discord.js");
 
-// =====================
-// 🔐 SAFE ENV
-// =====================
-function mustGetEnv(name) {
-    const value = process.env[name];
-    if (!value) {
-        console.error(`❌ FEHLER: ${name} fehlt in Railway Variables!`);
-        process.exit(1);
-    }
-    return value;
-}
-
-const TOKEN = mustGetEnv("DISCORD_TOKEN");
-const LOG_CHANNEL_ID = mustGetEnv("LOG_CHANNEL_ID");
-
-// =====================
-// 🤖 CLIENT
-// =====================
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
 
-const ROLE_NAME = process.env.ROLE_NAME || "Prakti-Sani-Leitung";
+// =====================
+// 🔐 ENV
+// =====================
+const TOKEN = process.env.DISCORD_TOKEN;
+const LOG_CHANNEL = process.env.LOG_CHANNEL_ID;
+const ADMIN_ROLE = process.env.ADMIN_ROLE;
+
+// =====================
+// 💾 DB
+// =====================
 const DB_FILE = "./database.json";
 
-// =====================
-// 📦 DB SAFE
-// =====================
 function loadDB() {
     if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, "{}");
-    return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+    return JSON.parse(fs.readFileSync(DB_FILE));
 }
 
-function saveDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+function saveDB(db) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
 // =====================
-// 🧠 ADD POINTS
+// 🔁 WEEK RESET
 // =====================
-function addPoints(db, userId, amount) {
-    if (!db[userId]) db[userId] = 0;
-    db[userId] += amount;
+function resetWeek() {
+    let db = loadDB();
+
+    for (const id in db) {
+        db[id].weekly = 0;
+    }
+
+    saveDB(db);
+    console.log("🔁 Weekly Reset done");
 }
+
+// Sonntag 19:30
+setInterval(() => {
+    const now = new Date();
+    if (now.getDay() === 0 && now.getHours() === 19 && now.getMinutes() === 30) {
+        resetWeek();
+    }
+}, 60000);
 
 // =====================
 // 🤖 READY
@@ -64,144 +67,179 @@ client.once(Events.ClientReady, () => {
 });
 
 // =====================
-// 🚑 INTERACTIONS
+// 📊 PANEL
 // =====================
 client.on(Events.InteractionCreate, async (interaction) => {
 
     let db = loadDB();
 
     // =====================
-    // 📊 PANEL COMMAND
+    // 🚑 PANEL COMMAND
     // =====================
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-
-        if (!interaction.member.roles.cache.some(r => r.name === ROLE_NAME)) {
-            return interaction.reply({
-                content: "❌ Keine Berechtigung.",
-                ephemeral: true
-            });
-        }
 
         const embed = new EmbedBuilder()
             .setTitle("🚑 LSMD – Ausbilder Punktepanel")
             .setColor(0x2ecc71)
             .setDescription(
-`**Wochenziel:** 5 Punkte pro Ausbilder  
-Vergib deine Punkte über die Buttons unten.
+`Wochenziel: 5 Punkte pro Ausbilder
 
-**Wertungen:**
-🟢 Bewerber eingestellt → +1  
-🔵 Alleine fahren Prüfung → +2  
-🔴 Sanitäter Prüfung → +3  
+🟢 +1 Bewerber
+🔵 +2 Prüfung
+🔴 +3 Sanitäter
 
-📌 Hinweis: Nur mit der Rolle PraktiSani klickbar.  
-🕒 Report: Sonntag 19:25 · Reset: Sonntag 19:30  
-
-LSMD Punkte-System • Buttons unten verwenden`
+📌 LSMD System`
             );
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("p1").setLabel("🟢 +1 Bewerber").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId("p2").setLabel("🔵 +2 Prüfung").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("p3").setLabel("🔴 +3 Sanitäter").setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId("me").setLabel("📊 Meine Punkte").setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId("p1").setLabel("+1").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("p2").setLabel("+2").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("p3").setLabel("+3").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId("stats").setLabel("Meine Stats").setStyle(ButtonStyle.Secondary)
         );
 
-        return interaction.reply({
-            embeds: [embed],
-            components: [row]
-        });
+        return interaction.reply({ embeds: [embed], components: [row] });
     }
 
     // =====================
-    // 🏆 LEADERBOARD
+    // 📊 STATS TOP 5 (LOG CHANNEL)
     // =====================
-    if (interaction.isChatInputCommand() && interaction.commandName === "leaderboard") {
+    if (interaction.isChatInputCommand() && interaction.commandName === "stats") {
 
         const sorted = Object.entries(db)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10);
+            .sort((a, b) => (b[1]?.total || 0) - (a[1]?.total || 0))
+            .slice(0, 5);
 
         const embed = new EmbedBuilder()
-            .setTitle("🏆 LSMD Leaderboard")
+            .setTitle("🏆 LSMD Top 5")
             .setColor(0xf1c40f);
 
-        let desc = "";
+        let text = "";
 
-        if (sorted.length === 0) desc = "Keine Daten vorhanden.";
-
-        sorted.forEach(([id, pts], i) => {
-            desc += `**${i + 1}.** <@${id}> — ${pts} Punkte\n`;
+        sorted.forEach((u, i) => {
+            text += `**${i + 1}.** <@${u[0]}> — ${u[1]?.total || 0} Punkte\n`;
         });
 
-        embed.setDescription(desc);
+        embed.setDescription(text || "Keine Daten");
 
-        return interaction.reply({ embeds: [embed] });
+        const logChannel = await client.channels.fetch(LOG_CHANNEL);
+        if (logChannel) logChannel.send({ embeds: [embed] });
+
+        return interaction.reply({
+            content: "📊 Stats wurden im Log Channel gepostet.",
+            ephemeral: true
+        });
     }
 
     // =====================
-    // 🔘 BUTTONS
+    // 🔘 BUTTON SYSTEM
     // =====================
     if (interaction.isButton()) {
 
-        if (!interaction.member.roles.cache.some(r => r.name === ROLE_NAME)) {
-            return interaction.reply({
-                content: "❌ Keine Berechtigung.",
-                ephemeral: true
-            });
+        const isAdmin = interaction.member.roles.cache.some(r => r.name === ADMIN_ROLE);
+
+        if (!db[interaction.user.id]) {
+            db[interaction.user.id] = { total: 0, weekly: 0 };
         }
 
-        if (!db[interaction.user.id]) db[interaction.user.id] = 0;
+        let add = 0;
 
-        let amount = 0;
-        let reason = "";
+        if (interaction.customId === "p1") add = 1;
+        if (interaction.customId === "p2") add = 2;
+        if (interaction.customId === "p3") add = 3;
 
-        if (interaction.customId === "p1") {
-            amount = 1;
-            reason = "Bewerber eingestellt";
-        }
+        // =====================
+        // ➕ ADD POINTS
+        // =====================
+        if (add > 0) {
 
-        if (interaction.customId === "p2") {
-            amount = 2;
-            reason = "Alleine fahren Prüfung";
-        }
-
-        if (interaction.customId === "p3") {
-            amount = 3;
-            reason = "Sanitäter Prüfung";
-        }
-
-        if (amount > 0) {
-            addPoints(db, interaction.user.id, amount);
+            db[interaction.user.id].total += add;
+            db[interaction.user.id].weekly += add;
             saveDB(db);
 
-            // =====================
-            // 📥 LOG CHANNEL
-            // =====================
-            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-
-            if (logChannel) {
-                logChannel.send(
-                    `📊 **Punkte vergeben**
-👤 User: <@${interaction.user.id}>
-➕ Punkte: **+${amount}**
-📌 Grund: ${reason}
-🏆 Gesamt: **${db[interaction.user.id]}**`
-                );
+            const log = await client.channels.fetch(LOG_CHANNEL);
+            if (log) {
+                log.send(`📥 <@${interaction.user.id}> +${add} Punkte`);
             }
 
             return interaction.reply({
-                content: `✅ +${amount} Punkte | Gesamt: ${db[interaction.user.id]}`,
+                content: `✅ +${add} Punkte`,
                 ephemeral: true
             });
         }
 
-        if (interaction.customId === "me") {
+        // =====================
+        // 👮 ADMIN PANEL
+        // =====================
+        if (interaction.customId === "admin") {
+
+            if (!isAdmin) {
+                return interaction.reply({ content: "❌ Kein Zugriff", ephemeral: true });
+            }
+
+            const menu = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId("admin_select")
+                    .setPlaceholder("🎛 Admin Aktion wählen")
+                    .addOptions([
+                        {
+                            label: "➕ Punkte geben",
+                            value: "add"
+                        },
+                        {
+                            label: "➖ Punkte entfernen",
+                            value: "remove"
+                        },
+                        {
+                            label: "🔁 Week Reset",
+                            value: "reset"
+                        }
+                    ])
+            );
+
             return interaction.reply({
-                content: `📊 Deine Punkte: **${db[interaction.user.id] || 0}**`,
+                content: "👮 Admin Panel",
+                components: [menu],
                 ephemeral: true
             });
         }
+
+        // =====================
+        // 📊 SELF STATS
+        // =====================
+        if (interaction.customId === "stats") {
+
+            const u = db[interaction.user.id] || { total: 0, weekly: 0 };
+
+            return interaction.reply({
+                content: `📊 Total: ${u.total}\n📅 Week: ${u.weekly}`,
+                ephemeral: true
+            });
+        }
+
+        saveDB(db);
+    }
+
+    // =====================
+    // 🎛 ADMIN MENU ACTION
+    // =====================
+    if (interaction.isStringSelectMenu() && interaction.customId === "admin_select") {
+
+        const isAdmin = interaction.member.roles.cache.some(r => r.name === ADMIN_ROLE);
+
+        if (!isAdmin) return interaction.reply({ content: "❌ Kein Zugriff", ephemeral: true });
+
+        const value = interaction.values[0];
+
+        if (value === "reset") {
+            resetWeek();
+            return interaction.reply({ content: "🔁 Week Reset done", ephemeral: true });
+        }
+
+        return interaction.reply({
+            content: "⚠ Feature (Add/Remove UI mit User Auswahl) kann ich dir als nächste Version bauen",
+            ephemeral: true
+        });
     }
 });
 
