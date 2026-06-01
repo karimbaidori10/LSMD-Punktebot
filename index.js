@@ -113,6 +113,10 @@ setInterval(async () => {
 // =====================
 client.on(Events.InteractionCreate, async (interaction) => {
 
+    if (handledInteractions.has(interaction.id)) return;
+    handledInteractions.add(interaction.id);
+    setTimeout(() => handledInteractions.delete(interaction.id), 60000);
+
     let db = await getAllPoints();
 
     if (interaction.isChatInputCommand() && interaction.commandName === "leaderboard") {
