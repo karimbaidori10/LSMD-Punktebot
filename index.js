@@ -276,7 +276,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
         .setTitle("🚑 LSMD – Ausbilder Punktepanel")
         .setDescription(
 
-`Wochenziel: 5 Punkte pro AusbilderVergib deine Punkte über die Buttons unten.
+`Wochenziel: 10 Punkte pro AusbilderVergib deine Punkte über die Buttons unten.
 
 Wertungen:🟢 Bewerber eingestellt → +1🔵 Alleine fahren Prüfung → +2🔴 Sanitäter Prüfung → +3
 
@@ -333,7 +333,7 @@ if (amount === 2) {color = 0x3498DB;emoji = "🔵";}
 
 if (amount === 3) {color = 0xE74C3C;emoji = "🔴";}
 
-const ziel = 5;const stand = db[interaction.user.id];
+const ziel = 10;const stand = db[interaction.user.id];
 
 const logEmbed = new EmbedBuilder()
     .setColor(color)
