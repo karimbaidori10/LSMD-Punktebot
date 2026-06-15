@@ -10,7 +10,10 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    StringSelectMenuBuilder
+    StringSelectMenuBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 // =====================
@@ -276,7 +279,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
         .setTitle("🚑 LSMD – Ausbilder Punktepanel")
         .setDescription(
 
-`Wochenziel: 5 Punkte pro AusbilderVergib deine Punkte über die Buttons unten.
+`Wochenziel: 10 Punkte pro AusbilderVergib deine Punkte über die Buttons unten.
 
 Wertungen:🟢 Bewerber eingestellt → +1🔵 Alleine fahren Prüfung → +2🔴 Sanitäter Prüfung → +3
 
@@ -302,6 +305,26 @@ LSMD Punkte-System • Buttons unten verwenden`);
 // 🔘 BUTTONS (FIXED)
 // =====================
 if (interaction.isButton()) {
+
+    if (interaction.customId === "points_note") {
+        const modal = new ModalBuilder()
+            .setCustomId(`points_note_modal_${interaction.channelId}_${interaction.message.id}`)
+            .setTitle("Ausbilder HQ Notiz");
+
+        const noteInput = new TextInputBuilder()
+            .setCustomId("note")
+            .setLabel("Notiz")
+            .setPlaceholder("z. B. Rücksprache nötig, Prüfung auffällig, sauber erledigt...")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(900);
+
+        const row = new ActionRowBuilder().addComponents(noteInput);
+
+        modal.addComponents(row);
+
+        return interaction.showModal(modal);
+    }
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
@@ -333,7 +356,7 @@ if (amount === 2) {color = 0x3498DB;emoji = "🔵";}
 
 if (amount === 3) {color = 0xE74C3C;emoji = "🔴";}
 
-const ziel = 5;const stand = db[interaction.user.id];
+const ziel = 10;const stand = db[interaction.user.id];
 
 const logEmbed = new EmbedBuilder()
     .setColor(color)
@@ -364,7 +387,18 @@ const logEmbed = new EmbedBuilder()
         text: `LSMD Punkte-System • ${new Date().toLocaleString("de-DE")}`
     });
 
-log?.send({embeds: [logEmbed]});
+const noteRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+        .setCustomId("points_note")
+        .setLabel("HQ Notiz hinzufügen")
+        .setEmoji("📝")
+        .setStyle(ButtonStyle.Secondary)
+);
+
+log?.send({
+    embeds: [logEmbed],
+    components: [noteRow]
+});
 
         return interaction.reply({
             content: `✅ +${amount} Punkte`,
@@ -426,6 +460,65 @@ log?.send({embeds: [logEmbed]});
             ephemeral: true
         });
     }
+}
+
+if (interaction.isModalSubmit() && interaction.customId.startsWith("points_note_modal_")) {
+    const parts = interaction.customId.replace("points_note_modal_", "").split("_");
+    const channelId = parts[0];
+    const messageId = parts[1];
+
+    const note = interaction.fields.getTextInputValue("note");
+
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+
+    if (!channel) {
+        return interaction.reply({
+            content: "❌ Channel konnte nicht gefunden werden.",
+            ephemeral: true
+        });
+    }
+
+    const message = await channel.messages.fetch(messageId).catch(() => null);
+
+    if (!message || !message.embeds?.[0]) {
+        return interaction.reply({
+            content: "❌ Punkte-Embed konnte nicht gefunden werden.",
+            ephemeral: true
+        });
+    }
+
+    const oldEmbed = message.embeds[0];
+    const embed = EmbedBuilder.from(oldEmbed);
+
+    const oldFields = oldEmbed.fields || [];
+    const filteredFields = oldFields.filter(field => field.name !== "📝 HQ Notiz");
+
+    embed.setFields(
+        ...filteredFields,
+        {
+            name: "📝 HQ Notiz",
+            value: `${note}\n\n*Hinzugefügt von <@${interaction.user.id}>*`,
+            inline: false
+        }
+    );
+
+    const updatedRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("points_note")
+            .setLabel("HQ Notiz bearbeiten")
+            .setEmoji("📝")
+            .setStyle(ButtonStyle.Secondary)
+    );
+
+    await message.edit({
+        embeds: [embed],
+        components: [updatedRow]
+    });
+
+    return interaction.reply({
+        content: "✅ HQ Notiz wurde gespeichert.",
+        ephemeral: true
+    });
 }
 
 // =====================
