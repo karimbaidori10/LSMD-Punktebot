@@ -127,40 +127,47 @@ setTimeout(() => handledInteractions.delete(interaction.id), 60000);
 
 let db = await getAllPoints();
 
+
+
 if (interaction.isChatInputCommand() && interaction.commandName === "leaderboard") {
+    await interaction.guild.members.fetch();
 
-const sorted = Object.entries(db)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+    const currentMembers = interaction.guild.members.cache
+        .filter(member => !member.user.bot);
 
-const leaderboardEmbed = new EmbedBuilder()
-    .setColor(0xF1C40F)
-    .setTitle("🏆 Prakti Sani Punkte Leaderboard")
-    .setTimestamp();
+    const leaderboard = currentMembers
+        .map(member => ({
+            id: member.id,
+            points: db[member.id] || 0
+        }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 10);
 
-let description = "";
+    let description = "";
 
-if (sorted.length === 0) {
-    description = "Keine Daten vorhanden.";
-} else {
-    for (let i = 0; i < sorted.length; i++) {
-        const [userId, points] = sorted[i];
+    for (let i = 0; i < leaderboard.length; i++) {
+        const entry = leaderboard[i];
 
         let medal = "🔹";
         if (i === 0) medal = "🥇";
         if (i === 1) medal = "🥈";
         if (i === 2) medal = "🥉";
 
-        description += `${medal} <@${userId}> — **${points} Punkte**\n`;
+        description += `${medal} <@${entry.id}> — **${entry.points} Punkte**\n`;
     }
-}
 
-leaderboardEmbed.setDescription(description);
+    const leaderboardEmbed = new EmbedBuilder()
+        .setColor(0xF1C40F)
+        .setTitle("🏆 Prakti Sani Punkte Leaderboard")
+        .setDescription(description || "Keine aktuellen Mitglieder gefunden.")
+        .setTimestamp();
 
-return interaction.reply({
-    embeds: [leaderboardEmbed]
-});
-
+    return interaction.reply({
+        embeds: [leaderboardEmbed],
+        allowedMentions: {
+            parse: []
+        }
+    });
 }
 
 if (interaction.isChatInputCommand() && interaction.commandName === "addpoints") {
